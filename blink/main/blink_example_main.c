@@ -99,13 +99,13 @@ void app_main(void)
         ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
         blink_led();
         /* Toggle the LED state */
-        if (counter % 4 == 0) {
+        if (counter == 0) {
             s_led_state = 1;
         } else {
             s_led_state = 0;
         }
         
         vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
-        counter = (counter + 1) % 1000000007;
+        counter = (counter + 1) % 4;
     }
 }
