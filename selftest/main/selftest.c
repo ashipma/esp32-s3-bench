@@ -3,26 +3,10 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 
-#include "esp_log.h"
-//#include "sdkconfig.h"
 
-static const char *TAG = "example";
-
-// The GPIO_ID_PIN(n) define comes from gpio.h
-#define MY_GPIO_PIN_1 GPIO_ID_PIN(1)
-#define MY_GPIO_PIN_14 GPIO_ID_PIN(14)
-#define MY_GPIO_PIN_21 GPIO_ID_PIN(21)
-#define MY_GPIO_PIN_41 GPIO_ID_PIN(41)
-#define MY_GPIO_PIN_42 GPIO_ID_PIN(42)
-#define MY_GPIO_PIN_47 GPIO_ID_PIN(47)
-
-/* Use project configuration menu (idf.py menuconfig) to choose the GPIO to blink,
-   or you can edit the following line and set a number here.
-*/
 #define BLINK_GPIO 2
 
 static uint8_t s_led_state = 0;
-
 
 
 static void blink_led(void)
@@ -33,7 +17,7 @@ static void blink_led(void)
 
 static void configure_led(void)
 {
-    ESP_LOGI(TAG, "Example configured to blink GPIO LED!");
+    printf("Example configured to blink GPIO LED!");
     gpio_reset_pin(BLINK_GPIO);
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
@@ -66,7 +50,14 @@ void app_main(void)
 {
     int up = 0;
     int down = 0;
-    int pins[] = {1, 14, 21, 41, 42, 47};
+    int pins[] = {
+        GPIO_NUM_1,
+        GPIO_NUM_14,
+        GPIO_NUM_21,
+        GPIO_NUM_41,
+        GPIO_NUM_42,
+        GPIO_NUM_47
+    };
     int pin_count = sizeof(pins) / sizeof(pins[0]);
     
     /* Configure the peripheral according to the LED type */
@@ -74,13 +65,13 @@ void app_main(void)
 
     int counter = 0;
     while (1) {
-        ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
+        printf("Turning the LED %s!\n", s_led_state == true ? "ON" : "OFF");
 
         for (int x=0; x<pin_count; x++) {
             int pin = pins[x];
             up = test_pin_pull_mode(pin, GPIO_PULLUP_ONLY);
             down = test_pin_pull_mode(pin, GPIO_PULLDOWN_ONLY);
-            ESP_LOGI(TAG, "  pin %d: up=%d, down=%d: success=%s", pin, up, down, up == 1 && down == 0 ? "YES" : "NO");
+            printf("  pin %d: up=%d, down=%d: success=%s\n", pin, up, down, up == 1 && down == 0 ? "YES" : "NO");
         }
         
         blink_led();
