@@ -17,7 +17,7 @@ static void blink_led(void)
 
 static void configure_led(void)
 {
-    printf("Example configured to blink GPIO LED!");
+    printf("Example configured to blink GPIO LED!\n");
     gpio_reset_pin(BLINK_GPIO);
     /* Set the GPIO as a push/pull output */
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
@@ -46,6 +46,21 @@ int test_pin_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull) {
     return gpio_get_level(gpio_num);
 }
 
+/**
+ * Sets the specified gpio_in_pin as an input pin and the gpio_out_pin as output
+ * and then sets the value on the output pin to be level and returns the value
+ * that is read from the input pin. The value on the input pin should be the
+ * same value on the output pin if the two pins are wired together.
+ */
+int test_pin_in_out(gpio_num_t gpio_in_pin, gpio_num_t gpio_out_pin, uint32_t level) {
+    gpio_set_direction(gpio_in_pin, GPIO_MODE_INPUT);
+    gpio_set_direction(gpio_out_pin, GPIO_MODE_OUTPUT);
+    
+    gpio_set_level(gpio_out_pin, level);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    return gpio_get_level(gpio_in_pin);
+}
+
 void app_main(void)
 {
     int up = 0;
@@ -60,6 +75,12 @@ void app_main(void)
     };
     int pin_count = sizeof(pins) / sizeof(pins[0]);
     
+    int in_out_pins[] = {
+        GPIO_NUM_41,
+        GPIO_NUM_42
+    };
+    int in_out_pin_count = sizeof(in_out_pins) / sizeof(in_out_pins[0]);
+    
     /* Configure the peripheral according to the LED type */
     configure_led();
 
@@ -67,12 +88,29 @@ void app_main(void)
     while (1) {
         printf("Turning the LED %s!\n", s_led_state == true ? "ON" : "OFF");
 
+        // passively drive each pin via its pull-up or pull-down resistor
         for (int x=0; x<pin_count; x++) {
             int pin = pins[x];
             up = test_pin_pull_mode(pin, GPIO_PULLUP_ONLY);
             down = test_pin_pull_mode(pin, GPIO_PULLDOWN_ONLY);
-            printf("  pin %d: up=%d, down=%d: success=%s\n", pin, up, down, up == 1 && down == 0 ? "YES" : "NO");
+            printf("  test_pull:: pin %d: up=%d, down=%d: success=%s\n", pin, up, down, up == 1 && down == 0 ? "YES" : "NO");
         }
+        
+        // actively drive pins that are connected such that the output pin
+        // drives the value of the input pin
+        for (int x=0; x<in_out_pin_count; x++) {
+            for (int y=0; y<in_out_pin_count; y++) {
+                if (x != y) {
+                    int in_pin = in_out_pins[x];
+                    int out_pin = in_out_pins[y];
+                    for (uint32_t level = 0; level <= 1; level++) {
+                        int actual_level = test_pin_in_out(in_pin, out_pin, level);
+                        printf("  test_in_out:: in=%d, out=%d: expected=%ld, actual=%d: success=%s\n", in_pin, out_pin, level, actual_level, level == actual_level ? "YES" : "NO");
+                    }
+                }
+            }
+        }
+        
         
         blink_led();
         /* Toggle the LED state */

@@ -1,0 +1,11 @@
+Turning the LED ON!
+  test_pull:: pin 1: up=1, down=0: success=YES
+  test_pull:: pin 14: up=1, down=0: success=YES
+  test_pull:: pin 21: up=1, down=0: success=YES
+  test_pull:: pin 41: up=0, down=0: success=NO
+  test_pull:: pin 42: up=0, down=0: success=NO
+  test_pull:: pin 47: up=1, down=0: success=YES
+  test_in_out:: in=41, out=42: expected=0, actual=0: success=YES
+  test_in_out:: in=41, out=42: expected=1, actual=1: success=YES
+  test_in_out:: in=42, out=41: expected=0, actual=0: success=YES
+  test_in_out:: in=42, out=41: expected=1, actual=1: success=YES
