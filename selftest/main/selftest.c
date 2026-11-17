@@ -9,10 +9,18 @@
 static uint8_t s_led_state = 0;
 
 
+// Forward declaration of the funtion.
+esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level);
+
+
+
+
+
+
 static void blink_led(void)
 {
     /* Set the GPIO level according to the state (LOW or HIGH)*/
-    gpio_set_level(BLINK_GPIO, s_led_state);
+    my_gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
 static void configure_led(void)
@@ -46,6 +54,13 @@ int test_pin_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull) {
     return gpio_get_level(gpio_num);
 }
 
+
+
+
+
+
+
+
 /**
  * Sets the specified gpio_in_pin as an input pin and the gpio_out_pin as output
  * and then sets the value on the output pin to be level and returns the value
@@ -55,11 +70,47 @@ int test_pin_pull_mode(gpio_num_t gpio_num, gpio_pull_mode_t pull) {
 int test_pin_in_out(gpio_num_t gpio_in_pin, gpio_num_t gpio_out_pin, uint32_t level) {
     gpio_set_direction(gpio_in_pin, GPIO_MODE_INPUT);
     gpio_set_direction(gpio_out_pin, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(gpio_in_pin, GPIO_FLOATING);
+    gpio_set_pull_mode(gpio_out_pin, GPIO_FLOATING);
     
-    gpio_set_level(gpio_out_pin, level);
+    my_gpio_set_level(gpio_out_pin, level);
     vTaskDelay(pdMS_TO_TICKS(10));
     return gpio_get_level(gpio_in_pin);
 }
+
+
+/**
+ * @brief  GPIO set output level. This is a reimplementation of the provided `gpio_set_level` function.
+ *
+ * @note This function is allowed to be executed when Cache is disabled within ISR context, by enabling `CONFIG_GPIO_CTRL_FUNC_IN_IRAM`
+ *
+ * @param  gpio_num GPIO number. If you want to set the output level of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);
+ * @param  level Output level. 0: low ; 1: high
+ *
+ * @return
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG GPIO number error
+ *
+ */
+esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
+    if (!GPIO_IS_VALID_GPIO(gpio_num)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    
+    if (level == 0) {
+        // set the bit in the clear register, GPIO_OUT_W1TC_REG,
+        // which is at offset 0x000C from the GPIO base address
+        // at 0x6000_4000, for an absolute address of 0x6000_400C.
+        *(volatile uint32_t *)0x6000400C |= (1 << gpio_num);
+    } else {
+        *(volatile uint32_t *)0x60004008 |= (1 << gpio_num);
+    }
+    
+    return ESP_OK;
+}
+
+
+
 
 void app_main(void)
 {
@@ -105,7 +156,7 @@ void app_main(void)
                     int out_pin = in_out_pins[y];
                     for (uint32_t level = 0; level <= 1; level++) {
                         int actual_level = test_pin_in_out(in_pin, out_pin, level);
-                        printf("  test_in_out:: in=%d, out=%d: expected=%ld, actual=%d: success=%s\n", in_pin, out_pin, level, actual_level, level == actual_level ? "YES" : "NO");
+                        printf("  test_in_out:: in=%d, out=%d: expected=%lu, actual=%d: success=%s\n", in_pin, out_pin, level, actual_level, level == actual_level ? "YES" : "NO");
                     }
                 }
             }
