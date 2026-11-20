@@ -82,8 +82,6 @@ int test_pin_in_out(gpio_num_t gpio_in_pin, gpio_num_t gpio_out_pin, uint32_t le
 /**
  * @brief  GPIO set output level. This is a reimplementation of the provided `gpio_set_level` function.
  *
- * @note This function is allowed to be executed when Cache is disabled within ISR context, by enabling `CONFIG_GPIO_CTRL_FUNC_IN_IRAM`
- *
  * @param  gpio_num GPIO number. If you want to set the output level of e.g. GPIO16, gpio_num should be GPIO_NUM_16 (16);
  * @param  level Output level. 0: low ; 1: high
  *
@@ -97,36 +95,34 @@ esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
         return ESP_ERR_INVALID_ARG;
     }
     
+    int shift_amount = gpio_num;
+    if (gpio_num >= 32) {
+        shift_amount -= 32;
+    }
+    
     const uintptr_t GPIO_BASE = (uintptr_t)0x60004000;
+    uintptr_t effective_address;
     if (level == 0) {
         // set the bit in the clear register, either GPIO_OUT_W1TC_REG
         // or GPIO_OUT1_W1TC_REG, depending on whether the gpio_num
         // is between 0 and 31 or 32 to 48. Those have offsets of
         // 0xC and 0x18 respectively. The offsets are relative to
         // the GPIO base address of 0x6000_4000.
-        volatile uint32_t *w1tc;
-        
         if (gpio_num < 32) {
-           w1tc = (volatile uint32_t *)(GPIO_BASE + 0xC);
+           effective_address = GPIO_BASE + 0xC;
         } else {
-            w1tc = (volatile uint32_t *)(GPIO_BASE + 0x18);
+            effective_address = (GPIO_BASE + 0x18);
         }
-        
-        printf("my_gpio_set_level:: w1tc = %p, gpio_num = %u\n", (void *)w1tc, gpio_num);
-        *w1tc = (1 << gpio_num);
     } else {
         // set the bit in the set register, GPIO_OUT_W1TS_REG
-        volatile uint32_t *w1ts;
-        
         if (gpio_num < 32) {
-            w1ts = (volatile uint32_t *)(GPIO_BASE + 0x8);
+            effective_address = (GPIO_BASE + 0x8);
         } else {
-            w1ts = (volatile uint32_t *)(GPIO_BASE + 0x14);
+            effective_address = (GPIO_BASE + 0x14);
         }
-        
-        printf("my_gpio_set_level:: w1ts = %p\n, gpio_num = %u\n", (void *)w1ts, gpio_num);
-        *w1ts = (1 << gpio_num);
     }
+    
+    *(volatile uint32_t *)effective_address = (1u << shift_amount);
     
     return ESP_OK;
 }
