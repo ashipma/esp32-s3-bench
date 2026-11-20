@@ -97,7 +97,7 @@ esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
         return ESP_ERR_INVALID_ARG;
     }
     
-    const uint32_t *GPIO_BASE = (uint32_t *)0x60004000;
+    const uintptr_t GPIO_BASE = (uintptr_t)0x60004000;
     if (level == 0) {
         // set the bit in the clear register, either GPIO_OUT_W1TC_REG
         // or GPIO_OUT1_W1TC_REG, depending on whether the gpio_num
@@ -112,6 +112,7 @@ esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
             w1tc = (volatile uint32_t *)(GPIO_BASE + 0x18);
         }
         
+        printf("my_gpio_set_level:: w1tc = %p, gpio_num = %u\n", (void *)w1tc, gpio_num);
         *w1tc = (1 << gpio_num);
     } else {
         // set the bit in the set register, GPIO_OUT_W1TS_REG
@@ -123,6 +124,7 @@ esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
             w1ts = (volatile uint32_t *)(GPIO_BASE + 0x14);
         }
         
+        printf("my_gpio_set_level:: w1ts = %p\n, gpio_num = %u\n", (void *)w1ts, gpio_num);
         *w1ts = (1 << gpio_num);
     }
     
