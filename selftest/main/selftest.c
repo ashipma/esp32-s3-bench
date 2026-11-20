@@ -97,13 +97,33 @@ esp_err_t my_gpio_set_level(gpio_num_t gpio_num, uint32_t level) {
         return ESP_ERR_INVALID_ARG;
     }
     
+    const uint32_t *GPIO_BASE = (uint32_t *)0x60004000;
     if (level == 0) {
-        // set the bit in the clear register, GPIO_OUT_W1TC_REG,
-        // which is at offset 0x000C from the GPIO base address
-        // at 0x6000_4000, for an absolute address of 0x6000_400C.
-        *(volatile uint32_t *)0x6000400C |= (1 << gpio_num);
+        // set the bit in the clear register, either GPIO_OUT_W1TC_REG
+        // or GPIO_OUT1_W1TC_REG, depending on whether the gpio_num
+        // is between 0 and 31 or 32 to 48. Those have offsets of
+        // 0xC and 0x18 respectively. The offsets are relative to
+        // the GPIO base address of 0x6000_4000.
+        volatile uint32_t *w1tc;
+        
+        if (gpio_num < 32) {
+           w1tc = (volatile uint32_t *)(GPIO_BASE + 0xC);
+        } else {
+            w1tc = (volatile uint32_t *)(GPIO_BASE + 0x18);
+        }
+        
+        *w1tc = (1 << gpio_num);
     } else {
-        *(volatile uint32_t *)0x60004008 |= (1 << gpio_num);
+        // set the bit in the set register, GPIO_OUT_W1TS_REG
+        volatile uint32_t *w1ts;
+        
+        if (gpio_num < 32) {
+            w1ts = (volatile uint32_t *)(GPIO_BASE + 0x8);
+        } else {
+            w1ts = (volatile uint32_t *)(GPIO_BASE + 0x14);
+        }
+        
+        *w1ts = (1 << gpio_num);
     }
     
     return ESP_OK;
