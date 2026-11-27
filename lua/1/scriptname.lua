@@ -1,0 +1,1 @@
+scriptname = arg[0]
